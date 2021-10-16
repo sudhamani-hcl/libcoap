@@ -161,6 +161,12 @@ typedef struct transient_value_t {
 static transient_value_t *example_data_value = NULL;
 static int example_data_media_type = COAP_MEDIATYPE_TEXT_PLAIN;
 
+struct ed_data {
+ int d2_res_data;
+ float d3_res_data;
+ char d4_res_data[512]; //json data
+}ed_data_instance;
+
 /* SIGINT handler: set quit to 1 for graceful termination */
 static void
 handle_sigint(int signum COAP_UNUSED) {
@@ -359,6 +365,172 @@ hnd_delete_time(coap_resource_t *resource COAP_UNUSED,
   /* type = request->hdr->type == COAP_MESSAGE_CON  */
   /*   ? COAP_MESSAGE_ACK : COAP_MESSAGE_NON; */
 }
+
+static void
+hnd_get_int_resource(coap_resource_t *resource,
+                   coap_session_t *session,
+                   const coap_pdu_t *request,
+                   const coap_string_t *query,
+                   coap_pdu_t *response) {
+  char resp_buf[11] = {0};//int32 max len
+  coap_string_t *uri_path = coap_get_uri_path (request);
+  printf("URI = %s\n", uri_path->s);
+  printf("Rxed Coap Get Request for Int resource\n");
+    coap_pdu_set_code(response, COAP_RESPONSE_CODE_CONTENT);
+    sprintf(resp_buf,"%d",ed_data_instance.d2_res_data);
+    coap_add_data_large_response(resource, session, request, response,
+                                 query, COAP_MEDIATYPE_TEXT_PLAIN, 1, 0,
+                                 strlen(resp_buf),
+                                 (uint8_t *)resp_buf, NULL, NULL);
+}
+
+static void
+hnd_put_int_resource(
+	           struct coap_resource_t *resource,
+             coap_session_t *session COAP_UNUSED,
+             const coap_pdu_t *request,
+             const coap_string_t *query COAP_UNUSED,
+             coap_pdu_t *response) {
+	size_t size;
+	uint8_t *data;
+  (void)resource;
+
+	/*	FILE *fp;
+		fp = fopen("coap_logs.txt", "a+");
+		if(fp == NULL){
+		printf("Error! Could not open file\n");
+		exit(-1);
+		}
+
+*/
+	printf("Rxed Coap PUT Request for Int resource\n");
+
+  coap_pdu_set_code(response, COAP_RESPONSE_CODE(204));
+
+
+	/* coap_get_data() sets size to 0 on error */
+	coap_get_data(request, &size, &data);
+  
+  printf("put data =%s\n",data); 
+	time_t t=time(NULL);
+	struct tm *tm = localtime(&t);
+	if (size == 0)        /* re-init */
+    printf("put data with len 0\n"); 
+	else {
+    ed_data_instance.d2_res_data = 0;
+    ed_data_instance.d2_res_data = strtol((char *)data,NULL,10);
+		//fprintf(fp, "Data updated with : %s, %s, %s\n", data, __TIME__, __DATE__);
+		printf("%d-%d-%d::%d:%d:%d::%s\r\n",tm->tm_mday,tm->tm_mon+1,tm->tm_year+1900,tm->tm_hour,tm->tm_min,tm->tm_sec,data);
+	}
+}
+
+static void
+hnd_get_float_resource(coap_resource_t *resource,
+                   coap_session_t *session,
+                   const coap_pdu_t *request,
+                   const coap_string_t *query,
+                   coap_pdu_t *response) {
+ 
+  char resp_buf[24] = {0};//float64 max len
+  printf("Rxed Coap Get Request for Float resource\n");
+  coap_pdu_set_code(response, COAP_RESPONSE_CODE_CONTENT);
+  sprintf(resp_buf,"%0.6f",ed_data_instance.d3_res_data);
+  coap_add_data_large_response(resource, session, request, response,
+                                 query, COAP_MEDIATYPE_TEXT_PLAIN, 1, 0,
+                                 strlen(resp_buf),
+                                 (uint8_t *)resp_buf, NULL, NULL);
+}
+
+static void
+hnd_put_float_resource(
+	           struct coap_resource_t *resource,
+             coap_session_t *session COAP_UNUSED,
+             const coap_pdu_t *request,
+             const coap_string_t *query COAP_UNUSED,
+             coap_pdu_t *response) {
+  size_t size;
+	uint8_t *data;
+  (void)resource;
+  /*  FILE *fp;
+    fp = fopen("coap_logs.txt", "a+");
+    if(fp == NULL){
+    printf("Error! Could not open file\n");
+    exit(-1);
+    }
+
+*/
+	printf("Rxed Coap PUT Request for Float resource\n");
+  coap_pdu_set_code(response, COAP_RESPONSE_CODE(204));
+
+  /* coap_get_data() sets size to 0 on error */
+  (void)coap_get_data(request, &size, &data);
+
+  time_t t=time(NULL);
+  struct tm *tm = localtime(&t);
+  if (size == 0)        /* re-init */
+    printf("put data with len 0\n"); 
+  else {
+    ed_data_instance.d3_res_data = 0;
+    ed_data_instance.d3_res_data = strtod((char *)data,NULL);
+    //fprintf(fp, "Data updated with : %s, %s, %s\n", data, __TIME__, __DATE__);
+    printf("%d-%d-%d::%d:%d:%d::%s\r\n",tm->tm_mday,tm->tm_mon+1,tm->tm_year+1900,tm->tm_hour,tm->tm_min,tm->tm_sec,data);
+  }
+}
+
+static void
+hnd_get_json_resource(coap_resource_t *resource,
+                   coap_session_t *session,
+                   const coap_pdu_t *request,
+                   const coap_string_t *query,
+                   coap_pdu_t *response) {
+  char resp_buf[512];
+  printf("Rxed Coap Get Request for Json resource\n");
+    coap_pdu_set_code(response, COAP_RESPONSE_CODE_CONTENT);
+  sprintf(resp_buf,"%s",ed_data_instance.d4_res_data);
+    coap_add_data_large_response(resource, session, request, response,
+                                 query, COAP_MEDIATYPE_TEXT_PLAIN, 1, 0,
+                                 strlen(resp_buf),
+                                 (uint8_t *)resp_buf, NULL, NULL);
+}
+
+static void
+hnd_put_json_resource(
+	           struct coap_resource_t *resource,
+             coap_session_t *session COAP_UNUSED,
+             const coap_pdu_t *request,
+             const coap_string_t *query COAP_UNUSED,
+             coap_pdu_t *response) {
+  size_t size;
+	uint8_t *data;
+  (void)resource;
+
+  /*  FILE *fp;
+    fp = fopen("coap_logs.txt", "a+");
+    if(fp == NULL){
+    printf("Error! Could not open file\n");
+    exit(-1);
+    }
+
+*/
+	printf("Rxed Coap PUT Request for Json resource\n");
+  coap_pdu_set_code(response, COAP_RESPONSE_CODE(204));
+
+  /* coap_get_data() sets size to 0 on error */
+  (void)coap_get_data(request, &size, &data);
+
+  time_t t=time(NULL);
+  struct tm *tm = localtime(&t);
+  if (size == 0)        /* re-init */
+    printf("put data with len 0\n"); 
+  else {
+    memset(ed_data_instance.d4_res_data, 0, sizeof(ed_data_instance.d4_res_data));
+    memcpy(ed_data_instance.d4_res_data, data, strlen((char*)data));
+    //fprintf(fp, "Data updated with : %s, %s, %s\n", data, __TIME__, __DATE__);
+    printf("%d-%d-%d::%d:%d:%d::%s\r\n",tm->tm_mday,tm->tm_mon+1,tm->tm_year+1900,tm->tm_hour,tm->tm_min,tm->tm_sec,data);
+  }
+}
+
+
 
 /*
  * This logic is used to test out that the client correctly handles a
@@ -1739,6 +1911,9 @@ proxy_nack_handler(coap_session_t *session,
 static void
 init_resources(coap_context_t *ctx) {
   coap_resource_t *r;
+    coap_resource_t *d2;
+	coap_resource_t *d3;
+	coap_resource_t *d4;
 
   r = coap_resource_init(NULL, 0);
   coap_register_handler(r, COAP_REQUEST_GET, hnd_get_index);
@@ -1764,7 +1939,20 @@ init_resources(coap_context_t *ctx) {
 
   coap_add_resource(ctx, r);
   time_resource = r;
+    d2 = coap_resource_init(coap_make_str_const("/a1r/d2/int"), COAP_RESOURCE_FLAGS_NOTIFY_CON);
+  coap_register_handler(d2, COAP_REQUEST_GET, hnd_get_int_resource);
+  coap_register_handler(d2, COAP_REQUEST_PUT, hnd_put_int_resource);
+  coap_add_resource(ctx, d2);
 
+  d3 = coap_resource_init(coap_make_str_const("/a1r/d3/float"), COAP_RESOURCE_FLAGS_NOTIFY_CON);
+  coap_register_handler(d3, COAP_REQUEST_GET, hnd_get_float_resource);
+  coap_register_handler(d3, COAP_REQUEST_PUT, hnd_put_float_resource);
+  coap_add_resource(ctx, d3);
+  
+  d4 = coap_resource_init(coap_make_str_const("/a1r/d4/json"), COAP_RESOURCE_FLAGS_NOTIFY_CON);
+  coap_register_handler(d4, COAP_REQUEST_GET, hnd_get_json_resource);
+  coap_register_handler(d4, COAP_REQUEST_PUT, hnd_put_json_resource);
+  coap_add_resource(ctx, d4);
   if (support_dynamic > 0) {
     /* Create a resource to handle PUTs to unknown URIs */
     r = coap_resource_unknown_init(hnd_unknown_put);
@@ -2578,6 +2766,11 @@ main(int argc, char **argv) {
   char port_str[NI_MAXSERV] = "5683";
   int opt;
   coap_log_t log_level = LOG_WARNING;
+    ed_data_instance.d2_res_data = 9876;
+  ed_data_instance.d3_res_data = 1.234567;
+  strcpy(ed_data_instance.d4_res_data,"{\"Json-Key\":\"Json-Val\"}");
+  printf("main function\n");
+
   unsigned wait_ms;
   coap_time_t t_last = 0;
   int coap_fd;
